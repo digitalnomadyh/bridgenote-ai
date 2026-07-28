@@ -1,0 +1,132 @@
+{
+  "students": [
+    {
+      "id": "S001",
+      "name": "Aiden",
+      "age": 9,
+      "instrument": "Violin",
+      "diagnosis": "ASD Level 1",
+      "attention_span_min": 4,
+      "communication_style": {
+        "type": "Visual",
+        "description": "Responds best to picture cards and a visual schedule. Verbal-only instructions are often missed."
+      },
+      "sensory_triggers": [
+        {
+          "trigger": "High-pitched open E-string sound",
+          "reaction": "Clamps hands over ears, may cry or rock"
+        },
+        {
+          "trigger": "Unexpected touch when adjusting bow hold",
+          "reaction": "Flinches and pulls the arm away"
+        }
+      ],
+      "preferred_reinforcers": [
+        "30 seconds of 'helicopter bow' spinning",
+        "Sticker on the visual schedule",
+        "Listening to 'Twinkle Twinkle Little Star' for 1 minute"
+      ],
+      "calming_strategies": [
+        "Move to the quiet corner of the room",
+        "Weighted lap pad for 2 minutes",
+        "Count to 10 together, slowly, holding up fingers"
+      ]
+    },
+    {
+      "id": "S002",
+      "name": "Mira",
+      "age": 7,
+      "instrument": "Violin",
+      "diagnosis": "ASD Level 2",
+      "attention_span_min": 3,
+      "communication_style": {
+        "type": "AAC device",
+        "description": "Uses an AAC tablet to request breaks or express 'stop'/'more'. Minimal spoken language."
+      },
+      "sensory_triggers": [
+        {
+          "trigger": "Sudden loud dynamics (forte bowing)",
+          "reaction": "Freezes, then tries to bolt from the chair"
+        },
+        {
+          "trigger": "Being asked to hold the instrument for more than 3 minutes without a break",
+          "reaction": "Drops the violin or pushes it away"
+        }
+      ],
+      "preferred_reinforcers": [
+        "Bubble wand break (favorite sensory toy)",
+        "Praise via AAC device 'good job' button playback",
+        "Choosing the next activity picture card"
+      ],
+      "calming_strategies": [
+        "Offer the AAC device immediately and wait for a response",
+        "Deep pressure hug (only if pre-approved by parent)",
+        "Switch to pizzicato (plucking) instead of bowing to lower volume"
+      ]
+    },
+    {
+      "id": "S003",
+      "name": "Noah",
+      "age": 11,
+      "instrument": "Violin",
+      "diagnosis": "ASD Level 1, co-occurring ADHD",
+      "attention_span_min": 5,
+      "communication_style": {
+        "type": "Verbal",
+        "description": "Strong verbal skills but needs short, literal instructions — avoid idioms like 'give it some space'."
+      },
+      "sensory_triggers": [
+        {
+          "trigger": "Being corrected mid-piece / interrupted while playing",
+          "reaction": "Refuses to continue, may argue or shut down"
+        },
+        {
+          "trigger": "Unstructured 'free time' with no clear task",
+          "reaction": "Wanders off or asks repeatedly to leave"
+        }
+      ],
+      "preferred_reinforcers": [
+        "2 minutes of choosing any song to play from a favorites list",
+        "Verbal praise naming the specific skill done well",
+        "Being 'teacher' for 1 minute to show a sibling/volunteer a note"
+      ],
+      "calming_strategies": [
+        "Give a 2-minute verbal warning before any transition",
+        "Let him finish the current phrase before giving feedback",
+        "Offer two structured choices instead of open-ended ones"
+      ]
+    },
+    {
+      "id": "S004",
+      "name": "Priya",
+      "age": 8,
+      "instrument": "Violin",
+      "diagnosis": "ASD Level 1",
+      "attention_span_min": 6,
+      "communication_style": {
+        "type": "Visual",
+        "description": "First/Then board works well. Prefers written or drawn instructions over spoken ones."
+      },
+      "sensory_triggers": [
+        {
+          "trigger": "Rosin dust smell or sticky rosin on fingers",
+          "reaction": "Refuses to touch the bow, wipes hands repeatedly"
+        },
+        {
+          "trigger": "Room lighting changes (overhead fluorescent flicker)",
+          "reaction": "Becomes distracted, covers eyes, loses focus"
+        }
+      ],
+      "preferred_reinforcers": [
+        "Drawing a note on the whiteboard after each success",
+        "1 minute with a fidget spinner",
+        "Extra sticker for the First/Then board"
+      ],
+      "calming_strategies": [
+        "Offer a wet wipe for hands before continuing",
+        "Dim or reposition lighting if possible, or move seats",
+        "Reset with the First/Then board to show what comes next"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+# BridgeNote AI -- mock-AI prototype (no external LLM API key required)
+streamlit>=1.35.0
