@@ -54,10 +54,11 @@ st.markdown("""
 }
 .stage-break { border-left-color: #FFD08A; }
 .stage-cooldown { border-left-color: #9AD0C2; }
+.stage-showcase { border-left-color: #FF8FA3; }
 </style>
 """, unsafe_allow_html=True)
 
-STAGE_CLASS = {"break": "stage-break", "cooldown": "stage-cooldown"}
+STAGE_CLASS = {"break": "stage-break", "cooldown": "stage-cooldown", "showcase": "stage-showcase"}
 
 
 @st.dialog("🆘 Instant SOS Helper")

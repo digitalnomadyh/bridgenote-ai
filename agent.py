@@ -14,6 +14,7 @@ module's public functions (generate_sos_protocol, generate_lesson_routine) as
 the stable interface the Streamlit UI already calls.
 """
 
+import math
 from datetime import date
 
 DISCLAIMER = (
@@ -24,6 +25,9 @@ DISCLAIMER = (
 )
 
 SOS_SCENARIOS = ["Covering ears", "Refusing instrument", "Wanting to leave"]
+
+# The last minutes of every lesson: the student plays back what they learned today.
+SHOWCASE_MIN = 2
 
 STAGE_TEMPLATES = [
     {"type": "warm_up", "label": "Hello & Schedule Check-in"},
@@ -111,6 +115,10 @@ def _describe_stage(stage_type: str, student: dict) -> str:
         return f"Offer a sensory reset: {calming[0]}, or a reinforcer break (\"{reinforcers[0]}\")."
     if stage_type == "cooldown":
         return f"Wrap up with {name}'s choice: \"{reinforcers[-1]}\". Mark today's schedule complete."
+    if stage_type == "showcase":
+        return (f"Ask {name} to play back what was learned today -- their choice of phrase. "
+                f"Celebrate the effort, then offer \"{reinforcers[0]}\". "
+                "Recording is optional and needs the parent/guardian's consent.")
     return ""
 
 
@@ -118,25 +126,28 @@ def _generate_routine_blocks(student: dict, total_min: int = 20) -> list[dict]:
     attention = student.get("attention_span_min", 4)
     block_len = min(max(attention, 3), 5)
 
-    n_blocks = min(max(4, round(total_min / block_len)), len(STAGE_TEMPLATES))
-    chosen = STAGE_TEMPLATES[:n_blocks]
+    # Keep the last SHOWCASE_MIN minutes for "show what you learned"; split the rest evenly
+    # so no block is longer than the student's attention span allows.
+    practice_min = total_min - SHOWCASE_MIN
+    n_blocks = min(max(4, math.ceil(practice_min / block_len)), len(STAGE_TEMPLATES))
+    base, extra = divmod(practice_min, n_blocks)
 
     routine = []
-    elapsed = 0
-    for i, stage in enumerate(chosen):
-        is_last = i == len(chosen) - 1
-        duration = (total_min - elapsed) if is_last else block_len
-        duration = max(2, duration)
+    for i, stage in enumerate(STAGE_TEMPLATES[:n_blocks]):
         routine.append({
             "order": i + 1,
             "title": stage["label"],
             "type": stage["type"],
-            "duration_min": duration,
+            "duration_min": base + (1 if i < extra else 0),
             "description": _describe_stage(stage["type"], student),
         })
-        elapsed += duration
-        if elapsed >= total_min:
-            break
+    routine.append({
+        "order": n_blocks + 1,
+        "title": "Show What You Learned",
+        "type": "showcase",
+        "duration_min": SHOWCASE_MIN,
+        "description": _describe_stage("showcase", student),
+    })
     return routine
 
 
