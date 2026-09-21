@@ -12,7 +12,16 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
 
+import importlib
+
 import streamlit as st
+
+# Streamlit Cloud does not watch files, so a redeploy keeps the *old* copy of any local module
+# that was already imported. Reload them on every run so pushes take effect without a reboot.
+for _mod in ("student_db", "agent", "lesson_timer", "voice_input"):
+    if _mod in sys.modules:
+        importlib.reload(sys.modules[_mod])
+
 from agent import BridgeNoteAgent, generate_lesson_routine, generate_sos_protocol, SOS_SCENARIOS
 from student_db import load_students, get_notes_for_student
 from lesson_timer import render_lesson_timer
