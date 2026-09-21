@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import streamlit as st
 from agent import BridgeNoteAgent, generate_lesson_routine, generate_sos_protocol, SOS_SCENARIOS
 from student_db import load_students, get_notes_for_student
+from lesson_timer import render_lesson_timer
 
 st.set_page_config(
     page_title="BridgeNote AI -- PulseArk",
@@ -152,6 +153,11 @@ with gen_col:
 routine = st.session_state.get("routine")
 if routine and routine["student_id"] == student["id"]:
     st.metric("Total Session Length", f"{routine['total_min']} min")
+
+    st.markdown("**⏱️ Lesson timer** -- press Start when the lesson begins. A soft beep tells you when to move to the next step.")
+    demo_speed = st.checkbox("Demo speed (1 min = 5 sec, for trying it out)", key="timer_demo_speed")
+    render_lesson_timer(routine, seconds_per_minute=5 if demo_speed else 60)
+
     for block in routine["blocks"]:
         css_class = STAGE_CLASS.get(block["type"], "")
         check_key = f"check_{student['id']}_{block['order']}"
