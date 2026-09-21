@@ -113,7 +113,8 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 
 // ---- video recording (device-only) -----------------------------------------
 let stream = null, mr = null, chunks = [], recStart = 0, recClock = null, blobUrl = null, blobExt = "webm";
-let recording = false, saved = false, panelWas = null;
+let recording = false, saved = false, saving = false, panelWas = null;
+let savedMsg = "✓ Saved to this device's downloads.", saveNote = "";
 const MAX_REC_SEC = 300;
 
 function pickMime() {
@@ -140,7 +141,7 @@ function updateRec() {
   el("consent").disabled = recording;
   el("result").hidden = !blobUrl || recording;
   if (recording) recMsg("● REC " + fmtSec(Math.floor((Date.now() - recStart) / 1000)), "rec");
-  else if (blobUrl) recMsg(saved ? "✓ Saved to this device's downloads." : "⚠ Not saved yet — tap Save before leaving this page.", saved ? "ok" : "warn");
+  else if (blobUrl) recMsg(saving ? "Preparing the file…" : saved ? savedMsg : (saveNote || "⚠ Not saved yet — tap Save before leaving this page."), saved ? "ok" : "warn");
   else if (inShowcase && !el("recstat").textContent) recMsg("Tick the consent box, then tap Start recording when the student is ready.");
   if (panelWas !== show) { panelWas = show; resizeFrame(); }
 }
@@ -181,16 +182,67 @@ function onRecordingStopped() {
 }
 function discardRecording() {
   if (blobUrl) URL.revokeObjectURL(blobUrl);
-  blobUrl = null; saved = false; el("playback").removeAttribute("src"); recMsg("");
+  blobUrl = null; saved = false; saveNote = ""; el("playback").removeAttribute("src"); recMsg("");
 }
-function saveRecording() {
-  if (!blobUrl) return;
+
+// Inside the Android app (Capacitor WebView) a blob: download does nothing, so hand the file to the
+// native Filesystem + Share plugins instead. The bridge is injected into every frame of the app's
+// origin; the parent frames are checked too in case it only reached the top one.
+function capacitor() {
+  for (const w of [window, window.parent, window.top]) {
+    try {
+      const c = w && w.Capacitor;
+      if (c && typeof c.nativePromise === "function" && c.isNativePlatform && c.isNativePlatform()) return c;
+    } catch (e) {}
+  }
+  return null;
+}
+const NATIVE_CHUNK = 3 * 1024 * 1024;   // multiple of 3 bytes, so each chunk is clean base64
+function blobToBase64(b) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(",")[1] || "");
+    r.onerror = () => rej(r.error);
+    r.readAsDataURL(b);
+  });
+}
+async function saveNative(cap, filename) {
+  const blob = await (await fetch(blobUrl)).blob();
+  const dir = "recordings";
+  // keep only the latest copy in the app's cache
+  try { await cap.nativePromise("Filesystem", "rmdir", { path: dir, directory: "CACHE", recursive: true }); } catch (e) {}
+  const path = dir + "/" + filename;
+  let uri = null;
+  // written in pieces: one 30 MB message through the native bridge can choke low-memory phones
+  for (let off = 0, n = 0; off < blob.size; off += NATIVE_CHUNK, n++) {
+    const data = await blobToBase64(blob.slice(off, off + NATIVE_CHUNK));
+    if (n === 0) uri = (await cap.nativePromise("Filesystem", "writeFile", { path: path, data: data, directory: "CACHE", recursive: true })).uri;
+    else await cap.nativePromise("Filesystem", "appendFile", { path: path, data: data, directory: "CACHE" });
+  }
+  await cap.nativePromise("Share", "share", { title: "BridgeNote lesson recording", dialogTitle: "Save or share the recording", files: [uri] });
+}
+async function saveRecording() {
+  if (!blobUrl || saving) return;
   const d = new Date(), p = n => String(n).padStart(2, "0");
+  const filename = "bridgenote_" + STUDENT + "_" + d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "_" + p(d.getHours()) + p(d.getMinutes()) + "." + blobExt;
+  const cap = capacitor();
+  if (cap) {
+    saving = true; saveNote = ""; el("save").disabled = true; updateRec();
+    try {
+      await saveNative(cap, filename);
+      saved = true; savedMsg = "✓ Sent to the share sheet — choose Drive, Files or another app to keep it.";
+    } catch (e) {
+      const m = String((e && e.message) || e);
+      saveNote = /cancel/i.test(m) ? "Sharing was cancelled — tap Save again when you're ready." : "Could not save the recording: " + m;
+    }
+    saving = false; el("save").disabled = false; updateRec(); resizeFrame();
+    return;
+  }
   const a = document.createElement("a");
   a.href = blobUrl;
-  a.download = "bridgenote_" + STUDENT + "_" + d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "_" + p(d.getHours()) + p(d.getMinutes()) + "." + blobExt;
+  a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
-  saved = true; updateRec();
+  saved = true; savedMsg = "✓ Saved to this device's downloads."; updateRec();
 }
 el("consent").onchange = updateRec;
 el("recBtn").onclick = startRecording;
