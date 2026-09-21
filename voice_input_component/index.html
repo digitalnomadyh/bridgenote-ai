@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 2px; font-family: "Source Sans Pro", system-ui, sans-serif; color: #3b3a4a; }
+  .card { background: #fff; border-radius: 14px; padding: 12px 16px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button { border: 0; border-radius: 10px; padding: 9px 16px; font-size: .95rem; cursor: pointer; background: #EEEBFF; color: #3b3a4a; }
+  button.primary { background: #FF6B6B; color: #fff; font-weight: 600; }
+  button.listening { background: #E03131; color: #fff; font-weight: 600; animation: pulse 1.4s infinite; }
+  button:disabled { opacity: .5; cursor: default; animation: none; }
+  select { border: 1px solid #DDD8F5; border-radius: 8px; padding: 8px 10px; font-size: .9rem; background: #fff; color: #3b3a4a; }
+  .status { font-size: .9rem; color: #5c5b6e; }
+  .status.err { color: #B5495B; }
+  .live { margin-top: 8px; min-height: 1.4em; color: #8a889c; font-style: italic; }
+  .hint { margin-top: 6px; font-size: .75rem; color: #8a889c; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(224,49,49,.45); } 70% { box-shadow: 0 0 0 10px rgba(224,49,49,0); } 100% { box-shadow: 0 0 0 0 rgba(224,49,49,0); } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="row">
+    <button id="mic" class="primary">&#127897;&#65039; Start voice input</button>
+    <select id="lang" aria-label="Speech language">
+      <option value="en-US">English</option>
+      <option value="ko-KR">한국어</option>
+    </select>
+    <span id="status" class="status"></span>
+  </div>
+  <div id="live" class="live"></div>
+  <div class="hint">Speech is transcribed by your browser's speech service (Chrome sends the audio to Google). Avoid saying children's full names.</div>
+</div>
+
+<script>
+// Minimal Streamlit component protocol (no build step / no npm needed).
+function send(type, extra) {
+  window.parent.postMessage(Object.assign({ isStreamlitMessage: true, type: type }, extra || {}), "*");
+}
+function fitFrame() { send("streamlit:setFrameHeight", { height: document.body.scrollHeight + 6 }); }
+window.addEventListener("message", function () { fitFrame(); });
+send("streamlit:componentReady", { apiVersion: 1 });
+
+const $ = id => document.getElementById(id);
+const nonce = Math.random().toString(36).slice(2, 8);
+let seq = 0, rec = null, wantOn = false, quickRestarts = 0, lastStart = 0;
+
+function status(text, isErr) { $("status").textContent = text || ""; $("status").className = "status" + (isErr ? " err" : ""); fitFrame(); }
+function ctor() { return window.SpeechRecognition || window.webkitSpeechRecognition; }
+function setUi(on) {
+  $("mic").innerHTML = on ? "&#9209;&#65039; Stop" : "&#127897;&#65039; Start voice input";
+  $("mic").className = on ? "listening" : "primary";
+}
+
+function commit(text) {
+  text = (text || "").trim();
+  if (!text) return;
+  seq++;
+  send("streamlit:setComponentValue", { value: { id: nonce + "-" + seq, text: text, lang: $("lang").value }, dataType: "json" });
+  status("Added to the feedback box");
+}
+
+function startRec() {
+  const C = ctor();
+  rec = new C();
+  rec.lang = $("lang").value;
+  // Android Chrome re-sends earlier phrases in continuous mode, so restart per utterance there instead.
+  rec.continuous = !/Android/i.test(navigator.userAgent);
+  rec.interimResults = true;
+  rec.onresult = function (e) {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) commit(r[0].transcript); else interim += r[0].transcript;
+    }
+    $("live").textContent = interim ? "… " + interim : "";
+    fitFrame();
+  };
+  rec.onerror = function (e) {
+    const msgs = {
+      "not-allowed": "Microphone is blocked. Allow microphone access for this site (lock icon next to the address bar), then try again.",
+      "service-not-allowed": "The browser's speech service is not allowed here. Try Chrome, or type your feedback.",
+      "audio-capture": "No microphone was found.",
+      "network": "Could not reach the speech service. Check the internet connection."
+    };
+    if (msgs[e.error]) { wantOn = false; status(msgs[e.error], true); }
+  };
+  rec.onend = function () {
+    $("live").textContent = "";
+    if (wantOn) {
+      // guard against a tight restart loop if the browser keeps ending the session immediately
+      quickRestarts = (Date.now() - lastStart < 800) ? quickRestarts + 1 : 0;
+      if (quickRestarts >= 5) { wantOn = false; status("Voice input stopped (the browser kept ending the session).", true); setUi(false); return; }
+      setTimeout(function () { if (wantOn) { lastStart = Date.now(); try { startRec(); } catch (_) {} } }, 250);
+    } else { setUi(false); }
+  };
+  lastStart = Date.now();
+  rec.start();
+}
+
+function stopRec() { wantOn = false; try { rec && rec.stop(); } catch (_) {} setUi(false); status(""); }
+
+$("mic").onclick = function () {
+  if (wantOn) { stopRec(); return; }
+  if (!ctor()) { status("Voice input isn't supported in this browser or app. Use Chrome, Edge or Safari, or your keyboard's microphone key.", true); return; }
+  wantOn = true; quickRestarts = 0; setUi(true); status("Listening… speak now");
+  try { startRec(); } catch (err) { wantOn = false; setUi(false); status("Could not start voice input: " + err.message, true); }
+};
+$("lang").onchange = function () {
+  if (wantOn) { try { rec.onend = null; rec.stop(); } catch (_) {} status("Listening… speak now"); try { startRec(); } catch (_) {} }
+};
+
+if (!ctor()) { $("mic").disabled = true; status("Voice input isn't supported in this browser or app. Use Chrome, Edge or Safari, or your keyboard's microphone key.", true); }
+fitFrame();
+</script>
+</body>
+</html>

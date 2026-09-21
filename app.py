@@ -16,6 +16,7 @@ import streamlit as st
 from agent import BridgeNoteAgent, generate_lesson_routine, generate_sos_protocol, SOS_SCENARIOS
 from student_db import load_students, get_notes_for_student
 from lesson_timer import render_lesson_timer
+from voice_input import append_dictation
 
 st.set_page_config(
     page_title="BridgeNote AI -- PulseArk",
@@ -168,7 +169,9 @@ if routine and routine["student_id"] == student["id"]:
         st.markdown(f"""<div class="routine-block {css_class}">{block['description']}</div>""", unsafe_allow_html=True)
 
     st.divider()
-    feedback = st.text_area("Lesson feedback for the next volunteer (optional)", key="lesson_feedback")
+    st.markdown("**Lesson feedback for the next volunteer (optional)** -- type, or tap the mic and dictate.")
+    append_dictation("lesson_feedback", component_key="feedback_voice")
+    feedback = st.text_area("Lesson feedback", key="lesson_feedback", label_visibility="collapsed")
     if st.button("💾 Save lesson feedback"):
         if feedback:
             agent.learn(student["id"], volunteer_name, "lesson_feedback", feedback)
